@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Inode.js在线聊天</title>
+<!--<link rel="stylesheet" href="/css/normalize.min.css">
+<link rel='stylesheet prefetch' href='https://fonts.googleapis.com/css?family=Open+Sans'>
+<link rel='stylesheet prefetch' href='/css/jquery.mCustomScrollbar.min.css'> 
+ <link rel="stylesheet" href="/css/chat.css">-->
+</head>
+<body>
+	<h1>聊天客户端</h1>
+	<textarea id="text"></textarea>
+	<button id="btn">发送消息</button>
+</body>
+
+	<script type="text/javascript" src="http://wulv5.com/js/socket.io.min.js">
+	
+	</script>
+	<script type="text/javascript">
+	
+		var socket = io.connect("localhost:3001");//连接scoket服务
+
+		var myMes = "";
+
+		document.getElementById("btn").onclick = function(){
+			var mes = document.getElementById("text").value;//获取到文本框的消息
+			if(!mes)return;
+			myMes = mes;
+			document.getElementById("text").value = "";
+			socket.send(mes);//发消息到服务端
+		};
+		
+		//当服务端广播消息的时候  会触发于回调中
+		socket.on("message",function(mes){
+			console.log(mes);
+			var p = document.createElement("p");
+			p.innerText = mes;
+			if(mes === myMes){
+				p.style.cssText = "color:red;font-weight:bold";
+			}
+			document.body.appendChild(p);
+		});
+
+	</script>
+</html>

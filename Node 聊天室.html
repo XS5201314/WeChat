@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!-- saved from url=(0021)http://wulv5.com/chat -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Node 聊天室</title>
+    <link rel="stylesheet" href="./Node 聊天室_files/normalize.min.css">
+    <link rel="stylesheet prefetch" href="https://fonts.googleapis.com/css?family=Open+Sans">
+    <link rel="stylesheet prefetch" href="http://wulv5.com/css/jquery.mCustomScrollbar.min.css">
+    <link rel="stylesheet" href="./Node 聊天室_files/chat.css">
+    <style>
+
+        ::-webkit-scrollbar{
+            width: 10px;
+            background-color: #131826;
+        }
+        ::-webkit-scrollbar-track{
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            background-color: #131826;
+        }
+        ::-webkit-scrollbar-thumb{
+            border-radius: 10px;
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+            background-color: #554035;
+        }
+    </style>
+</head>
+<body>
+<!--在聊天部分-->
+<div id="loginbox" style="z-index: 9999; width: 100%; height: 100%; position: absolute; display: none;">
+    <div style="width:260px;margin:300px auto;color:#fff;">
+        请先输入你在聊天室的昵称
+        <br>
+        <br>
+        <input type="text" style="width:180px;" placeholder="请输入用户名" id="username" name="username">
+        <input type="button" style="" value="进入聊天室" onclick="Chat.userNameSubmit();">
+    </div>
+</div>
+<div class="chat">
+    <div class="chat-title">
+        <h1>Node聊天室&nbsp;&nbsp;当前共有&nbsp;1&nbsp;人在线</h1>
+        <figure class="avatar">
+            <img src="./Node 聊天室_files/2.png" alt="聊天室头像">
+        </figure>
+    </div>
+    <div class="messages">
+        <div class="messages-content">
+            <div class="messages-content mCustomScrollbar _mCS_1 mCS_no_scrollbar">
+                <div id="mCSB_1" class="mCustomScrollBox mCS-light mCSB_vertical mCSB_inside" style="max-height: 509px;overflow-y:scroll" tabindex="0">
+                <div style="width:100%;clear:both;text-align:center">dd   加入了聊天室</div><div style="clear:both;margin-right:4px;" class="message message-personal new">dd </div></div>
+            </div>
+        </div>
+    </div>
+    <div class="message-box">
+        <input type="text" class="message-input" id="content" placeholder="这里输入信息 回车发送">
+        <button type="submit" class="message-submit" onclick="Chat.submit()">Send</button>
+    </div>
+</div>
+<div class="bg"></div>
+
+<!--引入socket包-->
+<script src="./Node 聊天室_files/socket.io.min.js.下载"></script>
+<script>
+    //定义聊天文档区域
+    const d = document,
+        Chat = {
+            msgObj: d.querySelector('#mCSB_1'),
+            username: null,
+            userid: null,
+            socket: null,
+            submit: function (){
+                const content = d.querySelector('.message-input').value
+                if(content){
+                    const data = {
+                        userid: this.userid,
+                        username: this.username,
+                        content: content
+                    }
+                    this.socket.emit('message',data)
+                    d.querySelector('.message-input').value = ''
+                }
+                return false
+            },
+            updateSysMsg: function (o,action){
+                const onlineCount = o.onlineCount,
+                    user = o.user,
+                    inout = (action == 'login') ? ' 加入了聊天室' : ' 退出了聊天室'
+                d.getElementsByTagName("h1")[0].innerHTML = `Node聊天室&nbsp;&nbsp;当前共有&nbsp;${onlineCount}&nbsp;人在线`;
+                this.msgObj.innerHTML += `<div style="width:100%;clear:both;text-align:center">${o['user']['username']} ${inout}</div>`
+                this.scrollToBottom();
+            },
+            userNameSubmit: function (){
+                const name = d.querySelector('#username').value
+                if(name){
+                    d.querySelector('#username').value = ''
+                    d.querySelector('#loginbox').style.display = 'none'
+                    this.init(name)
+                }
+                return false
+            },
+            init: function (username){
+                this.userid = this.genUid();
+                this.username = username;
+                this.socket = io.connect('/');
+                this.socket.emit('login',{userid: this.userid,username: this.username});
+                this.socket.on('login',function (o){
+                    Chat.updateSysMsg(o,'login');
+                });
+                this.socket.on('logout',function (o){
+                    Chat.updateSysMsg(o,'logout');
+                });
+                this.socket.on('message',function (obj){
+                    const isme = (obj.userid == Chat.userid),
+                        time = new Date().toLocaleString().substring(10,20)
+                    if(isme){
+                        Chat.msgObj.innerHTML += `<div style="clear:both;margin-right:4px;" class="message message-personal new">${obj['content']}</div>`
+                    }else{
+                        Chat.msgObj.innerHTML += `
+                            <div style="clear:both" id="mCSB_1_container" class="mCSB_container mCS_y_hidden mCS_no_scrollbar_y" style="position:relative; top:0; left:0;" dir="ltr">
+                                <div class="user">
+                                    ${obj['username']}
+                                </div>
+                                <div class="message new">
+                                    ${obj['content']}
+                                    <div style='width:100px;' class="timestamp">
+                                    ${time}
+                                    </div>
+                                </div>
+                            </div>`
+                    }
+                    Chat.scrollToBottom();
+                });
+            },
+            scrollToBottom: function (){
+                this.msgObj.scrollTop = this.msgObj.scrollHeight
+            },
+            genUid: function (){
+                return new Date().getTime() + "" + Math.floor(Math.random() * 899 + 100);
+            }
+        }
+    d.getElementById("loginbox").onkeydown = function (e){
+        e = e || event;
+        if(e.keyCode === 13){
+            Chat.userNameSubmit();
+        }
+    };
+    d.getElementById("content").onkeydown = function (e){
+        e = e || event;
+        if(e.keyCode === 13){
+            Chat.submit();
+        }
+    };
+</script></body></html>
